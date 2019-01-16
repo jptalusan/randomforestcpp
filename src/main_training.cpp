@@ -133,6 +133,11 @@ int main(int argc, char *argv[]){
 
             t->start();
 
+            std::ofstream outfile;
+
+            outfile.open("output.csv", std::ofstream::out | std::ofstream::trunc);
+            outfile.close();
+
             for (auto label : labels) {
                 centralizedTest(c, label);
             }
@@ -142,6 +147,11 @@ int main(int argc, char *argv[]){
             std::string label = arg2;
 
             t->start();
+
+            std::ofstream outfile;
+
+            outfile.open("output.csv", std::ofstream::out | std::ofstream::trunc);
+            outfile.close();
 
             centralizedTest(c, label);
 
