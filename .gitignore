@@ -93,4 +93,5 @@ src/rf_exe
 RTs_Forest*.txt
 src/RTs_Forest*.txt
 src/*.csv
+*.csv
 # End of https://www.gitignore.io/api/c,c++,cmake
