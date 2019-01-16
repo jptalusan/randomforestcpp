@@ -68,7 +68,7 @@ namespace Utils {
             json j;
             jsonFile >> j;
 
-            std::cout << std::setw(4) << j << std::endl;
+            // std::cout << std::setw(4) << j << std::endl;
             
             c.setNodeList(j["nodeList"]);
             c.setNumClass(j["numClass"]);

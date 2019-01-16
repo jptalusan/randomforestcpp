@@ -30,7 +30,7 @@ int myrandom (int i) { return std::rand()%i;}
 
 int main(int argc, char *argv[]){
     Utils::Json *json = new Utils::Json();
-    Utils::Configs c = json->parseJsonFile("configs.json");
+    // Utils::Configs c = json->parseJsonFile("configs.json");
     // Utils::Configs c = json->parseJsonFile("iris.json");
 
     if (argc < 2) {
@@ -38,24 +38,36 @@ int main(int argc, char *argv[]){
     } else {
         std::string arg1(argv[1]);
         std::string arg2 = "";
+        std::string arg3 = "";
         if (argc > 2) {
             arg2 = argv[2];
         }
+        if (argc > 3) {
+            arg3 = argv[3];
+        }
         Utils::Timer* t = new Utils::Timer();
-        std::cout << argc << ": " << arg1 << " " << arg2 << " " << std::endl;
-        if (arg1 == "train") {
+        std::cout << argc << ": " << arg1 << " " << arg2 << " " << arg3 << std::endl;
+        if (arg1 == "train" && argc == 3) {
+            // Arg 2 should be .json file (config file)
+            Utils::Configs c = json->parseJsonFile(arg2);
             t->start();
             train(c);
             t->stop();
-        } else if (arg1 == "test" && arg2 == "dist" && argc == 3) {
+        } else if (arg1 == "test" && arg2 == "dist" && argc == 4) {
+            // Arg 2 should be .json file (config file)
+            Utils::Configs c = json->parseJsonFile(arg3);
             t->start();
             distributedTest(c);
             t->stop();
-        } else if (arg1 == "test" && arg2 == "cent" && argc == 3) {
+        } else if (arg1 == "test" && arg2 == "cent" && argc == 4) {
+            // Arg 2 should be .json file (config file)
+            Utils::Configs c = json->parseJsonFile(arg3);
             t->start();
             centralizedTest(c);
             t->stop();
-        } else if (arg1 == "crossval") {
+        } else if (arg1 == "crossval" && argc == 3) {
+            // Arg 2 should be .json file (config file)
+            Utils::Configs c = json->parseJsonFile(arg2);
             t->start();
             centralizedCrossValidate(c, 3);
             t->stop();
@@ -124,7 +136,7 @@ void centralizedCrossValidate(Utils::Configs &c, int runs) {
 void centralizedTest(Utils::Configs &c) {
     char dir[255];
     getcwd(dir,255);
-    std::cout << dir << std::endl;
+    // std::cout << dir << std::endl;
 
     RTs::Forest rts_forest;
     std::stringstream ss;
@@ -143,10 +155,29 @@ void centralizedTest(Utils::Configs &c) {
     int score = 0;
     for (unsigned int i = 0; i < samples.size(); ++i) {
         RTs::Feature f = samples[i].feature_vec;
-        const float* histo = rts_forest.EstimateClass(f);
-        int classification = getClassNumberFromHistogram(c.numClass, histo);
-        // std::cout << "classification: " << classification << std::endl;
+        rts_forest.EstimateClass(f);
+
+        // rts_forest.EstimateClass(f);
+        std::vector<int> classifications = rts_forest.getTreeClassifications();
+        for (std::vector<int>::iterator it=classifications.begin(); it!=classifications.end(); ++it)
+            std::cout << ' ' << *it;
+        std::cout << std::endl;
+
+        std::map<int, int> mydict = {};
+        int cnt = 0;
+        int classification = 0;  // in Python you made this a string '', which seems like a bug
+
+        for (auto&& item : classifications) {
+            mydict[item] = mydict.emplace(item, 0).first->second + 1;
+            if (mydict[item] >= cnt) {
+                std::tie(cnt, classification) = std::tie(mydict[item], item);
+            }
+        }
+
         std::cout << "Class: " << classification << std::endl;
+
+
+        // std::cout << "Class: " << classification << std::endl;
         if (classification == samples[i].label) {
             ++score;
         }
@@ -234,7 +265,7 @@ int getClassNumberFromHistogram(int numberOfClasses, const float* histogram) {
 int train(Utils::Configs c) {
     char dir[255];
     getcwd(dir,255);
-    std::cout << dir << std::endl;
+    // std::cout << dir << std::endl;
 
     std::vector<RTs::Sample> samples = getSamples(c);
     //
@@ -268,7 +299,7 @@ int train(Utils::Configs c) {
     // 学習結果の保存
     //
 
-    std::cout << "2_Saving the learning result" << std::endl;
+    // std::cout << "2_Saving the learning result" << std::endl;
     if(rts_forest.Save("RTs_Forest.txt") == false){
         std::cerr << "RTs::Forest::Save() failed." << std::endl;
         std::cerr.flush();
@@ -281,7 +312,7 @@ int train(Utils::Configs c) {
 int train_for_crossval(Utils::Configs c, std::vector<RTs::Sample> &samples) {
     char dir[255];
     getcwd(dir,255);
-    std::cout << dir << std::endl;
+    // std::cout << dir << std::endl;
 
     std::cout << "1_Randomized Forest generation" << std::endl;
     RTs::Forest rts_forest;

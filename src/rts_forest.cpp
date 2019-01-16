@@ -318,7 +318,7 @@ bool Forest::Save(const std::string &filename){
 */
 
 bool Forest::Load(const std::string &filename){
-  std::cout << "＊Forest::Load： Forest Load the whole．4＊" << std::endl;
+  // std::cout << "＊Forest::Load： Forest Load the whole．4＊" << std::endl;
 
   for(unsigned int t=0; t<trees.size(); ++t){
     delete trees[t];
