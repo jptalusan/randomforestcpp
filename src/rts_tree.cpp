@@ -8,12 +8,16 @@
 #include <vector>
 #include <string>
 
+#include <sys/types.h>
+#define _BSD_SOURCE
+
+#include <sys/time.h>
+
 // #include "rts_feature.hpp"
 // #include "rts_sample.hpp"
 #include "rts_tree.hpp"
 //#define DEBUG
 namespace RTs{
-
 
 /*!
 @brief 再帰処理で Node の階層を生成する関数．:1
@@ -108,7 +112,10 @@ Node *Tree::build(const int maxDepth,
 
 	// std::cout << "		143_分岐につかう特徴量の次元をランダムに決定" << std::endl;
 	for(int ft=0; ft<featureTrials; ++ft){
-		srand (time(NULL));
+        struct timeval time; 
+        gettimeofday(&time,NULL);
+        srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+		//srand (seed);
 		// Randomly determine the dimensions of features used for branching
 		int rand_feature_id = (int)(rand() % feature_dim);
 

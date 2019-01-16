@@ -15,6 +15,10 @@
 #include "rts_forest.hpp"
 
 #include <algorithm>
+#include <sys/types.h>
+#define _BSD_SOURCE
+
+#include <sys/time.h>
 
 namespace RTs{
 //#define DEBUG
@@ -68,7 +72,11 @@ bool Forest::Learn(
   thresholdTrials = _thresholdTrials;
   dataPerTree = _dataPerTree;
 
-  srand (time(NULL));
+  //unsigned long seed = mix(clock(), time(NULL), getpid());
+  struct timeval time; 
+  gettimeofday(&time,NULL);
+  srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+  //srand (seed);
 
   for(unsigned int t=0; t<trees.size(); ++t){
     delete trees[t];

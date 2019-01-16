@@ -241,10 +241,10 @@ void centralizedTest(Utils::Configs &c, std::string label) {
     std::vector<RTs::Sample> samples = p->readCSVToSamples(c.inputFile);
 
     outfile.open("output.csv", std::ios_base::app);
-    outfile << label;
-    std::cout << label;
     int score = 0;
     for (unsigned int i = 0; i < samples.size(); ++i) {
+        std::cout << label;
+        outfile << label;
         RTs::Feature f = samples[i].feature_vec;
         rts_forest.EstimateClass(f);
 
