@@ -18,61 +18,146 @@
 #include <thread>
 
 //#define DEBUG
-int train(Utils::Configs c);
-int getClassNumberFromHistogram(int numberOfClasses, const float* histogram);
-void distributedTest(Utils::Configs &c);
-void centralizedTest(Utils::Configs &c);
+int train(Utils::Configs c, std::string label);
+void centralizedTest(Utils::Configs &c, std::string label);
+
 void centralizedCrossValidate(Utils::Configs &c, int runs);
 int train_for_crossval(Utils::Configs c, std::vector<RTs::Sample> &samples);
 void centralizedTest_for_crossval(Utils::Configs c, std::vector<RTs::Sample> &samples);
 
+int getClassNumberFromHistogram(int numberOfClasses, const float* histogram);
 int myrandom (int i) { return std::rand()%i;}
 
+class InputParser{
+    public:
+        InputParser (int &argc, char **argv){
+            for (int i=1; i < argc; ++i)
+                this->tokens.push_back(std::string(argv[i]));
+        }
+        /// @author iain
+        const std::string& getCmdOption(const std::string &option) const{
+            std::vector<std::string>::const_iterator itr;
+            itr =  std::find(this->tokens.begin(), this->tokens.end(), option);
+            if (itr != this->tokens.end() && ++itr != this->tokens.end()){
+                return *itr;
+            }
+            static const std::string empty_string("");
+            return empty_string;
+        }
+        /// @author iain
+        bool cmdOptionExists(const std::string &option) const{
+            return std::find(this->tokens.begin(), this->tokens.end(), option)
+                   != this->tokens.end();
+        }
+    private:
+        std::vector <std::string> tokens;
+};
+
+// Add method to edit json config file, ie. number of trees and % of data
 int main(int argc, char *argv[]){
     Utils::Json *json = new Utils::Json();
-    // Utils::Configs c = json->parseJsonFile("configs.json");
-    // Utils::Configs c = json->parseJsonFile("iris.json");
-
     if (argc < 2) {
-        std::cout << "rf_exe [test|train] [cent|dist]" << std::endl;
+        std::cout << "rf_exe [train|classify] [all|ACTIVITY_NAME]" << std::endl;
+        std::cout << "-t [number of trees per forest]" << std::endl;
+        std::cout << "-i [input csv file for classification]" << std::endl;
+        std::cout << "-c [config file]" << std::endl;
     } else {
         std::string arg1(argv[1]);
         std::string arg2 = "";
-        std::string arg3 = "";
+        int numOfTrees = 3;
+        std::string csvFile = "SmartHome/" + arg2 + ".csv";
+        std::string config = "SmartHome.json";
+
         if (argc > 2) {
             arg2 = argv[2];
         }
-        if (argc > 3) {
-            arg3 = argv[3];
+
+        InputParser input(argc, argv);
+        if(input.cmdOptionExists("-t")){
+            // Do stuff
+            std::string::size_type sz;
+            const std::string &filename = input.getCmdOption("-t");
+            numOfTrees = std::stoi(filename, &sz);
+            std::cout << "Number of trees: " << numOfTrees << std::endl;
         }
+
+        if(input.cmdOptionExists("-i")){
+            // Do stuff
+            csvFile = input.getCmdOption("-i");
+            std::cout << "Input CSV File: " << csvFile << std::endl;
+        }
+
+        if(input.cmdOptionExists("-c")){
+            // Do stuff
+            config = input.getCmdOption("-c");
+            std::cout << "Config file: " << config << std::endl;
+        }
+
+        std::cout << argc << ": " << arg1 << " " << arg2 << std::endl;
         Utils::Timer* t = new Utils::Timer();
-        std::cout << argc << ": " << arg1 << " " << arg2 << " " << arg3 << std::endl;
-        if (arg1 == "train" && argc == 3) {
-            // Arg 2 should be .json file (config file)
-            Utils::Configs c = json->parseJsonFile(arg2);
+
+        Utils::Configs c = json->parseJsonFile(config);
+        c.setInputFile(csvFile);
+        c.setNumTrees(numOfTrees);
+
+        if (arg1 == "train" && arg2 == "all") {
+            std::vector<std::string> labels = 
+            { "Bathing", "ReadingBook", "UsingSmartphone", "WorkingOnPC",
+            "CleaningRoom", "CleaningBathroom", "PlayingGame", "WashingDishes", 
+            "Eating", "Sleeping", "StayingAtHome", "Dressing", 
+            "WatchingTelevision", "Laundry", "PersonalHygiene", "UsingToilet", 
+            "Cooking" };
+
             t->start();
-            train(c);
+
+            for (auto label : labels) {
+                train(c, label);
+            }
+
             t->stop();
-        } else if (arg1 == "test" && arg2 == "dist" && argc == 4) {
-            // Arg 2 should be .json file (config file)
-            Utils::Configs c = json->parseJsonFile(arg3);
+        } else if (arg1 == "train" && arg2 != "all") {
+            std::string label = arg2;
+
             t->start();
-            distributedTest(c);
+
+            train(c, label);
+
             t->stop();
-        } else if (arg1 == "test" && arg2 == "cent" && argc == 4) {
-            // Arg 2 should be .json file (config file)
-            Utils::Configs c = json->parseJsonFile(arg3);
+        } else if (arg1 == "classify" && arg2 == "all") {
+            std::vector<std::string> labels = 
+            { "Bathing", "ReadingBook", "UsingSmartphone", "WorkingOnPC",
+            "CleaningRoom", "CleaningBathroom", "PlayingGame", "WashingDishes", 
+            "Eating", "Sleeping", "StayingAtHome", "Dressing", 
+            "WatchingTelevision", "Laundry", "PersonalHygiene", "UsingToilet", 
+            "Cooking" };
+
             t->start();
-            centralizedTest(c);
+
+            for (auto label : labels) {
+                centralizedTest(c, label);
+            }
+
+            t->stop();
+        } else if (arg1 == "classify" && arg2 != "all") {
+            std::string label = arg2;
+
+            t->start();
+
+            centralizedTest(c, label);
+
             t->stop();
         } else if (arg1 == "crossval" && argc == 3) {
-            // Arg 2 should be .json file (config file)
-            Utils::Configs c = json->parseJsonFile(arg2);
+            std::string label = arg2;
             t->start();
+
+            std::string filepath = "SmartHome.json";
+            Utils::Configs c = json->parseJsonFile(filepath);
+            c.setInputFile("SmartHome/" + label + ".csv");
             centralizedCrossValidate(c, 3);
+
             t->stop();
         } else {
-            std::cout << "rf_exe [test|train]" << std::endl;
+            std::cout << "rf_exe [train|classify] [all|ACTIVITY_NAME]" << std::endl;
         }
         delete t;
     }
@@ -126,32 +211,28 @@ void centralizedCrossValidate(Utils::Configs &c, int runs) {
         train_for_crossval(c, vtrain);
         std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         centralizedTest_for_crossval(c, vtest);
-        // std::cout << '\n';
-
-        // for (std::vector<std::string>::iterator it=vtest.begin(); it!=vtest.end(); ++it)
-        //   std::cout << ' ' << *it;
     }
 }
 
-void centralizedTest(Utils::Configs &c) {
+void centralizedTest(Utils::Configs &c, std::string label) {
     char dir[255];
     getcwd(dir,255);
-    // std::cout << dir << std::endl;
-
     RTs::Forest rts_forest;
+    std::ofstream outfile;
+
     std::stringstream ss;
-    ss << "RTs_Forest.txt";
+    ss << "SmartHomeModels/" + label + "_forest.txt";
     rts_forest.Load(ss.str());
 
     Utils::Parser *p = new Utils::Parser();
-
-    // Utils::Json *json = new Utils::Json();
-    // Utils::Configs c = json->parseJsonFile("configs.json");
 
     p->setClassColumn(c.labelColumn);
     //p->setNumberOfFeatures(54);
     std::vector<RTs::Sample> samples = p->readCSVToSamples(c.inputFile);
 
+    outfile.open("output.csv", std::ios_base::app);
+    outfile << label;
+    std::cout << label;
     int score = 0;
     for (unsigned int i = 0; i < samples.size(); ++i) {
         RTs::Feature f = samples[i].feature_vec;
@@ -159,13 +240,16 @@ void centralizedTest(Utils::Configs &c) {
 
         // rts_forest.EstimateClass(f);
         std::vector<int> classifications = rts_forest.getTreeClassifications();
-        for (std::vector<int>::iterator it=classifications.begin(); it!=classifications.end(); ++it)
-            std::cout << ' ' << *it;
+        for (std::vector<int>::iterator it=classifications.begin(); it!=classifications.end(); ++it) {
+            std::cout << ',' << *it;
+            outfile << "," << *it;
+        }
         std::cout << std::endl;
+        outfile << std::endl;
 
         std::map<int, int> mydict = {};
         int cnt = 0;
-        int classification = 0;  // in Python you made this a string '', which seems like a bug
+        int classification = 0;
 
         for (auto&& item : classifications) {
             mydict[item] = mydict.emplace(item, 0).first->second + 1;
@@ -174,76 +258,15 @@ void centralizedTest(Utils::Configs &c) {
             }
         }
 
-        std::cout << "Class: " << classification << std::endl;
-
-
         // std::cout << "Class: " << classification << std::endl;
+
+
         if (classification == samples[i].label) {
             ++score;
         }
     }
-    float f = (float) score / (float) samples.size();
-    std::cout << score << "/" << samples.size() << ": " << f << std::endl;
-}
-
-void distributedTest(Utils::Configs &c) {
-    // Utils::Json *json = new Utils::Json();
-    // Utils::Configs c = json->parseJsonFile("configs.json");
-
-    std::vector<std::string> nodeList = c.nodeList;
-
-    Utils::SCP *u = new Utils::SCP();
-    u->setNodeList(nodeList);
-    u->getFiles();
-    //u->deleteFiles();
-    
-    //Have to loop through all of the node list
-    std::vector<std::vector<int>> scoreVectors;
-    std::vector<int> correctLabel;
-    std::vector<RTs::Forest> randomForests;
-    //Assume to read RTs_Forest.txt
-    char dir[255];
-    getcwd(dir,255);
-    std::cout << dir << std::endl;
-
-
-    for (unsigned int i = 0; i < nodeList.size(); ++i) {
-        RTs::Forest rts_forest;
-        std::stringstream ss;
-        ss << "RTs_Forest_" << i << ".txt";
-        rts_forest.Load(ss.str());
-        randomForests.push_back(rts_forest);
-        ss.str(std::string());
-    }
-    //todo: process the rts_forest, load fxn already created the node
-    // read the csv file here
-    std::vector<RTs::Sample> samples = getSamples(c);
-    
-
-    //Too many loops for testing
-    //Need to change checkScores func to just accept the samples vector (too large? const)
-    std::for_each(samples.begin(), samples.end(), [&](const RTs::Sample& s) {
-        correctLabel.push_back(s.label);
-    });
-
-    for (unsigned int i = 0; i < samples.size(); ++i) {
-        std::vector<int> nodeListSamples(0, 3);
-        scoreVectors.push_back(nodeListSamples);
-        for (unsigned int j = 0; j < nodeList.size(); ++j) {
-            RTs::Feature f = samples[i].feature_vec;
-            const float* histo = randomForests[j].EstimateClass(f);
-
-            //std::cout << getClassNumberFromHistogram(10, histo) << std::endl;
-
-            scoreVectors[i].push_back(getClassNumberFromHistogram(c.numClass, histo));
-        }
-    }
-
-    Utils::TallyScores *ts = new Utils::TallyScores();
-    ts->checkScores(correctLabel, scoreVectors);
-    //u->deleteLocalFiles();
-    delete u;
-    delete ts;
+    // float f = (float) score / (float) samples.size();
+    // std::cout << score << "/" << samples.size() << ": " << f << std::endl;
 }
 
 int getClassNumberFromHistogram(int numberOfClasses, const float* histogram) {
@@ -262,10 +285,9 @@ int getClassNumberFromHistogram(int numberOfClasses, const float* histogram) {
 }
 
 //TODO: make arguments adjustable via argv and transfer code to pi to start distribution
-int train(Utils::Configs c) {
+int train(Utils::Configs c, std::string label) {
     char dir[255];
     getcwd(dir,255);
-    // std::cout << dir << std::endl;
 
     std::vector<RTs::Sample> samples = getSamples(c);
     //
@@ -277,9 +299,7 @@ int train(Utils::Configs c) {
     //  featureTrials = 50 //分岐ノード候補の数
     //  thresholdTrials = 5  //分岐ノード閾値検索の候補の数
     //  dataPerTree = .25f  //サブセットに分けるデータの割合
-    //
 
-    // std::cout << "1_Randomized Forest generation" << std::endl;
     RTs::Forest rts_forest;
     if(!rts_forest.Learn(
     	c.numClass, 
@@ -300,7 +320,8 @@ int train(Utils::Configs c) {
     //
 
     // std::cout << "2_Saving the learning result" << std::endl;
-    if(rts_forest.Save("RTs_Forest.txt") == false){
+    std::string filepath = "SmartHomeModels/" + label + "_forest.txt";
+    if(rts_forest.Save(filepath) == false){
         std::cerr << "RTs::Forest::Save() failed." << std::endl;
         std::cerr.flush();
         return 1;

@@ -68,6 +68,8 @@ bool Forest::Learn(
   thresholdTrials = _thresholdTrials;
   dataPerTree = _dataPerTree;
 
+  srand (time(NULL));
+
   for(unsigned int t=0; t<trees.size(); ++t){
     delete trees[t];
   }
@@ -225,7 +227,7 @@ const float* Forest::EstimateClass(const Feature &feature_vec){
   }
   memset(histogram, 0, numClass*sizeof(float));
 
-  std::cout << "Forest: ";
+  // std::cout << "Forest: ";
 
   std::vector<int> classifications;
   //This counts the trees and then collates all the histograms and adds it up into a random forest histogram
