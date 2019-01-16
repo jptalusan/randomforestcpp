@@ -89,4 +89,6 @@ CTestTestfile.cmake
 
 src/rf_exe.dir/
 src/rf_exe
+
+RTs_Forest*.txt
 # End of https://www.gitignore.io/api/c,c++,cmake
